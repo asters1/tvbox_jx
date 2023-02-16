@@ -1,0 +1,22 @@
+{
+  "bookSourceName": "httpbin",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://httpbin.org",
+  "customOrder": -2085958990,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "enabledReview": true,
+  "lastUpdateTime": 1676341721584,
+  "respondTime": 180000,
+  "ruleBookInfo": {},
+  "ruleContent": {},
+  "ruleExplore": {},
+  "ruleReview": {},
+  "ruleSearch": {
+    "bookList": "@js:\njava.log(result);"
+  },
+  "ruleToc": {},
+  "searchUrl": "/get?a=b,{'headers':{\"a\":\"888\"}}",
+  "weight": 0
+}

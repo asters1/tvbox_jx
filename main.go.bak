@@ -1,0 +1,253 @@
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/robertkrimen/otto"
+	"github.com/tidwall/gjson"
+)
+
+func main() {
+
+	keyword := ""
+	result := ""
+	vm := otto.New()
+
+	sourcePath := "./source.json"
+	content, err := ioutil.ReadFile(sourcePath)
+	if err != nil {
+		fmt.Println("读取[" + sourcePath + "]文件失败!请检查!!!")
+		os.Exit(1)
+	}
+	sourceJsonStr := string(content)
+
+	//	sourceId := gjson.Get(sourceJsonStr, "0.sourceId").String()
+	sourceUrl := gjson.Get(sourceJsonStr, "0.sourceUrl").String()
+	//	sourceName := gjson.Get(sourceJsonStr, "0.sourceName").String()
+	//	sourceGroup := gjson.Get(sourceJsonStr, "0.sourceGroup").String()
+	//	sourceCommit := gjson.Get(sourceJsonStr, "0.sourceCommit").String()
+	//	sourceBaseHeader := gjson.Get(sourceJsonStr, "0.sourceBaseHeader").String()
+	searchUrl := gjson.Get(sourceJsonStr, "0.searchUrl").String()
+	//	searchVideoList := gjson.Get(sourceJsonStr, "0.searchVideoList").String()
+	//	searchVideoName := gjson.Get(sourceJsonStr, "0.searchVideoName").String()
+	//	searchVideoAuthor := gjson.Get(sourceJsonStr, "0.searchVideoAuthor").String()
+	//	searchVideoPerformer := gjson.Get(sourceJsonStr, "0.searchVideoPerformer").String()
+	//	searchVideoKind := gjson.Get(sourceJsonStr, "0.searchVideoKind").String()
+	//	searchVideoLastChapter := gjson.Get(sourceJsonStr, "0.searchVideoLastChapter").String()
+	//	searchVideoInfo := gjson.Get(sourceJsonStr, "0.searchVideoInfo").String()
+	//	searchVideoCoverUrl := gjson.Get(sourceJsonStr, "0.searchVideoCoverUrl").String()
+	//	searchVideoUrl := gjson.Get(sourceJsonStr, "0.searchVideoUrl").String()
+	//	kindUrl := gjson.Get(sourceJsonStr, "0.kindUrl").String()
+	//	kindVideoList := gjson.Get(sourceJsonStr, "0.kindVideoList").String()
+	//	kindVideoName := gjson.Get(sourceJsonStr, "0.kindVideoName").String()
+	//	kindVideoAuthor := gjson.Get(sourceJsonStr, "0.kindVideoAuthor").String()
+	//	kindVideoPerformer := gjson.Get(sourceJsonStr, "0.kindVideoPerformer").String()
+	//	kindVideoKind := gjson.Get(sourceJsonStr, "0.kindVideoKind").String()
+	//	kindVideoLastChapter := gjson.Get(sourceJsonStr, "0.kindVideoLastChapter").String()
+	//	kindVideoInfo := gjson.Get(sourceJsonStr, "0.kindVideoInfo").String()
+	//	kindVideoCoverUrl := gjson.Get(sourceJsonStr, "0.kindVideoCoverUrl").String()
+	//	kindVideoUrl := gjson.Get(sourceJsonStr, "0.kindVideoUrl").String()
+	//	detailsVideoName := gjson.Get(sourceJsonStr, "0.detailsVideoName").String()
+	//	detailsVideoAuthor := gjson.Get(sourceJsonStr, "0.detailsVideoAuthor").String()
+	//	detailsVideoKind := gjson.Get(sourceJsonStr, "0.detailsVideoKind").String()
+	//	detailsVideoLastChapter := gjson.Get(sourceJsonStr, "0.detailsVideoLastChapter").String()
+	//	detailsVideoInfo := gjson.Get(sourceJsonStr, "0.detailsVideoInfo").String()
+	//	detailsVideoCoverUrl := gjson.Get(sourceJsonStr, "0.detailsVideoCoverUrl").String()
+	//	detailsCatalogueUrl := gjson.Get(sourceJsonStr, "0.detailsCatalogueUrl").String()
+	//	CatalogueChapterList := gjson.Get(sourceJsonStr, "0.CatalogueChapterList").String()
+	//	CatalogueChapterName := gjson.Get(sourceJsonStr, "0.CatalogueChapterName").String()
+	//	CatalogueChapterUrl := gjson.Get(sourceJsonStr, "0.CatalogueChapterUrl").String()
+	//	CatalogueNextTocUrl := gjson.Get(sourceJsonStr, "0.CatalogueNextTocUrl").String()
+	//	videourl := gjson.Get(sourceJsonStr, "0.videourl").String()
+
+	jsInit(vm)
+	keyword = "斗罗大陆"
+	old_time := time.Now().UnixNano() / 1e6
+
+	logPrintln(old_time, "➤➤➤ 开始搜索关键字:"+keyword)
+	logPrintln(old_time, " ⬇  开始解析搜索页")
+	result = dealSearchUrl(old_time, sourceUrl, searchUrl, keyword)
+	fmt.Println(result)
+
+}
+func logPrintln(old_time int64, str string) {
+	now_time := time.Now().UnixNano() / 1e6
+	a := now_time - old_time
+	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
+	fmt.Printf("[%.2fs]", b)
+	fmt.Println(" " + str)
+}
+func isHttp(str string) bool {
+	if strings.HasPrefix(str, "http") {
+		return true
+	}
+	return false
+}
+func haveBody(str string) bool {
+	if strings.Contains(str, ",") {
+		return true
+	}
+	return false
+
+}
+func dealSearchUrl(old_time int64, sourceUrl string, searchUrl string, key string) string {
+	method := "GET"
+	searchUrl = strings.ReplaceAll(searchUrl, "{{key}}", "\""+key+"\"")
+	if !isHttp(searchUrl) {
+		searchUrl = sourceUrl + searchUrl
+	}
+	if haveBody(searchUrl) {
+		index := strings.Index(searchUrl, ",")
+		body := searchUrl[index+1:]
+		searchUrl = searchUrl[:index]
+		BodyMap := jxBody(body)
+		if BodyMap["method"] != "" {
+			method = BodyMap["method"]
+		}
+		res, err := RequestClient(searchUrl, method, formatJson(BodyMap["headers"]), formatJson(BodyMap["body"]))
+		if err != nil {
+			logPrintln(old_time, " ⬆  获取失败！"+searchUrl)
+			return ""
+		}
+		logPrintln(old_time, " ≡  获取成功！"+searchUrl)
+		fmt.Println(res)
+	}
+
+	return searchUrl
+}
+func jxBody(body string) map[string]string {
+	BodyMap := make(map[string]string)
+	lines := strings.Split(body, "\n")
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], ":") {
+			index := strings.Index(lines[i], ":")
+			a := strings.ReplaceAll(lines[i][:index], "'", "")
+			a = strings.TrimSpace(a)
+			if strings.HasPrefix(a, "{") {
+				a = a[1:]
+			}
+			b := strings.ReplaceAll(lines[i][index+1:], "'", "")
+			b = strings.TrimSpace(b)
+			if strings.HasPrefix(b, "{") && strings.HasSuffix(b, "}") {
+				b = b[1 : len(b)-1]
+			}
+			if strings.HasSuffix(b, "}") {
+				b = b[:len(b)-1]
+			}
+			if strings.HasSuffix(b, ",") {
+				b = b[:len(b)-1]
+			}
+			BodyMap[a] = b
+		}
+	}
+	return BodyMap
+
+}
+func formatJson(jstr string) string {
+	jstr = strings.ReplaceAll(jstr, "\n", "")
+	jstr = strings.ReplaceAll(jstr, " ", "")
+	jstr = strings.ReplaceAll(jstr, ",", "\n")
+	fstr := jstr
+
+	return fstr
+
+}
+func RequestClient(URL string, METHOD string, HEADER string, DATA string) (*http.Response, error) {
+	HeaderMap := FormatStr(HEADER)
+	DataMap := FormatStr(DATA)
+	client := &http.Client{}
+	if METHOD == "get" {
+		METHOD = http.MethodGet
+	} else if METHOD == "post" {
+		METHOD = http.MethodPost
+
+	}
+	FormatData := ""
+	for i, j := range DataMap {
+		FormatData = FormatData + i + "=" + j + "&"
+	}
+	if FormatData != "" {
+		FormatData = FormatData[:len(FormatData)-1]
+	}
+	requset, _ := http.NewRequest(
+		METHOD,
+		URL,
+		strings.NewReader(FormatData),
+	)
+	if METHOD == http.MethodPost && requset.Header.Get("Content-Type") == "" {
+		requset.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	requset.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.71 Safari/537.36")
+	for i, j := range HeaderMap {
+		requset.Header.Set(i, j)
+	}
+	resp, err := client.Do(requset)
+	return resp, err
+
+}
+func FormatStr(jsonstr string) map[string]string {
+	DataMap := make(map[string]string)
+	Nslice := strings.Split(jsonstr, "\n")
+	for i := 0; i < len(Nslice); i++ {
+		if strings.Index(Nslice[i], ":") != -1 {
+			if strings.TrimSpace(Nslice[i])[:6] == "Origin" {
+
+				a := strings.TrimSpace(Nslice[i][:strings.Index(Nslice[i], ":")])
+				b := strings.TrimSpace(Nslice[i][strings.Index(Nslice[i], ":")+1:])
+				c := strings.Trim(a, "\"")
+				d := strings.Trim(b, "\"")
+				DataMap[c] = d
+			} else {
+				a := strings.TrimSpace(Nslice[i][:strings.LastIndex(Nslice[i], ":")])
+				b := strings.TrimSpace(Nslice[i][strings.LastIndex(Nslice[i], ":")+1:])
+				c := strings.Trim(a, "\"")
+				d := strings.Trim(b, "\"")
+				DataMap[c] = d
+			}
+		}
+	}
+	return DataMap
+
+}
+func jsInit(vm *otto.Otto) {
+	vm.Set("go_RequestClient", func(URL string, METHOD string, HEADER string, DATA string) (*http.Response, error) {
+
+		HeaderMap := FormatStr(HEADER)
+		DataMap := FormatStr(DATA)
+		client := &http.Client{}
+		if METHOD == "get" {
+			METHOD = http.MethodGet
+		} else if METHOD == "post" {
+			METHOD = http.MethodPost
+
+		}
+		FormatData := ""
+		for i, j := range DataMap {
+			FormatData = FormatData + i + "=" + j + "&"
+		}
+		if FormatData != "" {
+			FormatData = FormatData[:len(FormatData)-1]
+		}
+		requset, _ := http.NewRequest(
+			METHOD,
+			URL,
+			strings.NewReader(FormatData),
+		)
+		if METHOD == http.MethodPost && requset.Header.Get("Content-Type") == "" {
+			requset.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+		requset.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.71 Safari/537.36")
+		for i, j := range HeaderMap {
+			requset.Header.Set(i, j)
+		}
+		resp, err := client.Do(requset)
+		return resp, err
+	})
+
+}
