@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -69,8 +70,8 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 }
 
 func JxResult_string(vm *otto.Otto, jstr string, rule string) interface{} {
-	rule = ` @xpath: 
-	/html/body/div[3]/div/div[2]/table/tbody/tr[5]/td/a/text()
+	rule = ` @re: 
+<title>(.*?)</title>
 	`
 	rule = strings.TrimSpace(rule)
 
@@ -93,9 +94,18 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) interface{} {
 		rule = rule[4:]
 		a, _ := vm.Run(rule)
 		result := a.String()
-
 		return result
 	} else if strings.HasPrefix(rule, "@re:") {
+		rule = strings.ReplaceAll(rule, "\n", "")
+		rule = strings.TrimSpace(rule)
+		rule = rule[4:]
+		rule = strings.TrimSpace(rule)
+		re := regexp.MustCompile(rule)
+		a := re.FindString(jstr)
+		fmt.Println(jstr)
+		fmt.Println(rule)
+		fmt.Println(a)
+
 	}
 
 	return ""
