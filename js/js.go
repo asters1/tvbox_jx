@@ -33,6 +33,14 @@ func Init(vm *otto.Otto) *otto.Otto {
 		HEADER, _ := call.Argument(2).ToString()
 		DATA, _ := call.Argument(3).ToString()
 
+		URL = strings.TrimSpace(URL)
+		METHOD = strings.TrimSpace(METHOD)
+		HEADER = strings.TrimSpace(HEADER)
+		DATA = strings.TrimSpace(DATA)
+		if URL == "" || METHOD == "" {
+			return otto.Value{}
+		}
+
 		HeaderMap := FormatStr(HEADER)
 		DataMap := FormatStr(DATA)
 		client := &http.Client{}

@@ -112,9 +112,6 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 }
 func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 	rule = ` @js: 
-
-	var a=["a","b","c"]
-	return a
 	`
 	rule = strings.TrimSpace(rule)
 	if strings.HasPrefix(rule, "@json:") {
@@ -126,6 +123,7 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 		for i := 0; i < len(res); i++ {
 			result = append(result, res[i].String())
 		}
+
 		return result
 	} else if strings.HasPrefix(rule, "@xpath:") {
 		rule = strings.ReplaceAll(rule, "\n", "")
@@ -139,13 +137,18 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 		fmt.Println(htmlquery.InnerText(nodes[0]))
 		for i := 0; i < len(nodes); i++ {
 			result = append(result, htmlquery.InnerText(nodes[i]))
-
 		}
-
 		return result
+
 	} else if strings.HasPrefix(rule, "@js:") {
 		rule = rule[4:]
+		rule = `
+	var a=["a","b","c"]
+	return a
+		`
 		a, _ := vm.Run(rule)
+
+		fmt.Println(a.String())
 		result := a
 		fmt.Println(result)
 		return nil
