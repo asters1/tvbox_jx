@@ -19,7 +19,7 @@ var (
 
 func main() {
 	SID := "111"
-	keyword = "我的"
+	keyword = "系统"
 	sourcePath = "./source.json"
 	vm = js.Init(vm)
 	tools.Spider(vm, SID, keyword, sourcePath)

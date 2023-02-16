@@ -1,12 +1,12 @@
 {
   "111": {
     "sourceId": "111",
-    "sourceUrl": "https://www.dubuxiaoshuo.com",
+    "sourceUrl": "http://00txs.com",
     "sourceName": "酷我",
     "sourceGroup": "",
     "sourceCommit": "",
-    "sourceBaseHeader": "User-Agent:Dalvik/2.1.0 (Linux; U; Android 11; M2012K11AC Build/RKQ1.200826.002)\nKeep-Alive:300\nConnection:Keep-Alive\nCache-Control:no-cache",
-    "searchUrl": "/plus/search.php?q={{key}}",
+    "sourceBaseHeader": "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+    "searchUrl": "/novel/search?searchkey={{key}}",
     "searchMethod": "get",
     "searchHeader": "",
     "searchData": "",

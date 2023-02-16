@@ -65,14 +65,12 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	res, _ := vm.Get("resultBody")
 	result := res.String()
 	LogPrintln_jtx(startTime, "开始解析搜索页")
-	JxResult_string(vm, result, "")
+	ress := JxResult_slice(vm, result, "")
+	fmt.Println(ress)
 
 }
 
-func JxResult_string(vm *otto.Otto, jstr string, rule string) interface{} {
-	rule = ` @re: 
-<title>(.*?)</title>
-	`
+func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 	rule = strings.TrimSpace(rule)
 
 	if strings.HasPrefix(rule, "@json:") {
@@ -101,14 +99,72 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) interface{} {
 		rule = rule[4:]
 		rule = strings.TrimSpace(rule)
 		re := regexp.MustCompile(rule)
-		a := re.FindString(jstr)
-		fmt.Println(jstr)
-		fmt.Println(rule)
-		fmt.Println(a)
+		res := re.FindStringSubmatch(jstr)
+		if len(res) > 0 {
+			return res[1]
+
+		}
+		return ""
 
 	}
 
 	return ""
+}
+func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
+	rule = ` @js: 
+
+	var a=["a","b","c"]
+	return a
+	`
+	rule = strings.TrimSpace(rule)
+	if strings.HasPrefix(rule, "@json:") {
+		rule = rule[6:]
+		rule = strings.ReplaceAll(rule, "\n", "")
+		rule = strings.TrimSpace(rule)
+		res := gjson.Get(jstr, rule).Array()
+		var result []string
+		for i := 0; i < len(res); i++ {
+			result = append(result, res[i].String())
+		}
+		return result
+	} else if strings.HasPrefix(rule, "@xpath:") {
+		rule = strings.ReplaceAll(rule, "\n", "")
+		rule = strings.TrimSpace(rule)
+		rule = rule[7:]
+		doc, _ := htmlquery.Parse(strings.NewReader(jstr))
+		nodes, _ := htmlquery.QueryAll(doc, rule)
+		//nodes, _ := htmlquery.QueryAll(doc, rule)
+		//fmt.Println(jstr)
+		var result []string
+		fmt.Println(htmlquery.InnerText(nodes[0]))
+		for i := 0; i < len(nodes); i++ {
+			result = append(result, htmlquery.InnerText(nodes[i]))
+
+		}
+
+		return result
+	} else if strings.HasPrefix(rule, "@js:") {
+		rule = rule[4:]
+		a, _ := vm.Run(rule)
+		result := a
+		fmt.Println(result)
+		return nil
+	} else if strings.HasPrefix(rule, "@re:") {
+		rule = strings.ReplaceAll(rule, "\n", "")
+		rule = strings.TrimSpace(rule)
+		rule = rule[4:]
+		rule = strings.TrimSpace(rule)
+		re := regexp.MustCompile(rule)
+		res := re.FindStringSubmatch(jstr)
+		if len(res) > 0 {
+			return nil
+
+		}
+		return nil
+
+	}
+
+	return nil
 }
 
 func ReadSourceFile(path string) (string, error) {
