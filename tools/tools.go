@@ -75,12 +75,8 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	LogPrintln_xia(startTime, videoName)
 	sourceSearchVideoAuthor := gjson.Get(SourceJson, sid+".searchVideoAuthor").String()
 	LogPrintln_shang(startTime, "导演")
-	SearchVideoAuthor := JxResult_slice(vm, videoInfo, sourceSearchVideoAuthor)
-	SearchVideoAuthor_string := ""
-	for i := 0; i < len(SearchVideoAuthor); i++ {
-		SearchVideoAuthor_string = SearchVideoAuthor_string + SearchVideoAuthor[i] + " "
-	}
-	LogPrintln_xia(startTime, SearchVideoAuthor_string)
+	SearchVideoAuthor := JxResult_string(vm, videoInfo, sourceSearchVideoAuthor)
+	LogPrintln_xia(startTime, SearchVideoAuthor)
 
 }
 
@@ -129,7 +125,7 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 
 	}
 
-	return ""
+	return "格式有误，请检查!"
 }
 func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 	rule = strings.TrimSpace(rule)
@@ -188,8 +184,10 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 
 		return result
 	}
+	var result []string
+	result = append(result, "格式有误，请检查!")
 
-	return nil
+	return result
 }
 
 func ReadSourceFile(path string) (string, error) {
