@@ -27,34 +27,22 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	sourceName := gjson.Get(SourceJson, sid+".sourceName").String()
 	LogPrintln_sanjao(startTime, "开始测试源:"+sourceName)
 
-	LogPrintln_shang(startTime, "正在加载BaseUrl...")
 	sourceBaseUrl := gjson.Get(SourceJson, sid+".sourceUrl").String()
-	LogPrintln_xia(startTime, sourceBaseUrl)
 	vm.Set("sourceBaseUrl", sourceBaseUrl)
-	LogPrintln_shang(startTime, "正在加载BaseHeader...")
 	sourceBaseHeader := gjson.Get(SourceJson, sid+".sourceBaseHeader").String()
-	LogPrintln_xia(startTime, sourceBaseHeader)
 	vm.Set("sourceBaseHeader", sourceBaseHeader)
-	LogPrintln_shang(startTime, "正在加载searchUrl...")
 	sourceSUrl := gjson.Get(SourceJson, sid+".searchUrl").String()
 	sourceSearchUrl := ReplaceKey(sourceSUrl, keyword)
 	sourceSearchUrl = CheckUrl(sourceBaseUrl, sourceSearchUrl)
-	LogPrintln_xia(startTime, sourceSearchUrl)
 	vm.Set("sourceSearchUrl", sourceSearchUrl)
-	LogPrintln_shang(startTime, "正在加载searchMethod...")
 	sourceSearchMethod := gjson.Get(SourceJson, sid+".searchMethod").String()
-	LogPrintln_xia(startTime, sourceSearchMethod)
 	vm.Set("sourceSearchMethod", sourceSearchMethod)
 
-	LogPrintln_shang(startTime, "正在加载searchHeader...")
 	sourceSearchHeader := gjson.Get(SourceJson, sid+".searchHeader").String()
 	sourceSearchHeader = ReplaceKey(sourceSearchHeader, keyword)
-	LogPrintln_xia(startTime, sourceSearchHeader)
 	vm.Set("sourceSearchHeader", sourceBaseHeader+"\n"+sourceSearchHeader)
-	LogPrintln_shang(startTime, "正在加载searchData...")
 	sourceSearchData := gjson.Get(SourceJson, sid+".searchData").String()
 	sourceSearchData = ReplaceKey(sourceSearchData, keyword)
-	LogPrintln_xia(startTime, sourceSearchData)
 	vm.Set("sourceSearchData", sourceSearchData)
 
 	LogPrintln_sanjao(startTime, "开始搜索关键字:"+key)
@@ -62,11 +50,42 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	searchResult=go_RequestClient(sourceSearchUrl,sourceSearchMethod,sourceSearchHeader,sourceSearchData)
 	resultBody=searchResult.body
 	`)
-	res, _ := vm.Get("resultBody")
-	result := res.String()
+	res_body, err := vm.Get("resultBody")
+	if err != nil {
+		LogPrintln_err(startTime, "获取失败!!!"+sourceSearchUrl)
+		return
+	}
+	LogPrintln_success(startTime, "获取成功:"+sourceSearchUrl)
+	result := res_body.String()
 	LogPrintln_jtx(startTime, "开始解析搜索页")
-	ress := JxResult_slice(vm, result, "")
-	fmt.Println(ress)
+	searchVideoList := gjson.Get(SourceJson, sid+".searchVideoList").String()
+	searchVideoListResult := JxResult_slice(vm, result, searchVideoList)
+
+	LogPrintln_shang(startTime, "获取视频列表")
+	if len(searchVideoListResult) > 0 {
+		LogPrintln_xia(startTime, "列表大小:"+strconv.Itoa(len(searchVideoListResult)))
+	} else {
+
+		LogPrintln_xia(startTime, "视频列表为空")
+	}
+	videoInfo := SelectVideo(0, searchVideoListResult)
+	sourceSearchVideoName := gjson.Get(SourceJson, sid+".searchVideoName").String()
+	LogPrintln_shang(startTime, "获取视频名")
+	videoName := JxResult_string(vm, videoInfo, sourceSearchVideoName)
+	LogPrintln_xia(startTime, videoName)
+	sourceSearchVideoAuthor := gjson.Get(SourceJson, sid+".searchVideoAuthor").String()
+	LogPrintln_shang(startTime, "导演")
+	SearchVideoAuthor := JxResult_slice(vm, videoInfo, sourceSearchVideoAuthor)
+	SearchVideoAuthor_string := ""
+	for i := 0; i < len(SearchVideoAuthor); i++ {
+		SearchVideoAuthor_string = SearchVideoAuthor_string + SearchVideoAuthor[i] + " "
+	}
+	LogPrintln_xia(startTime, SearchVideoAuthor_string)
+
+}
+
+func SelectVideo(index int, list []string) string {
+	return list[index]
 
 }
 
@@ -78,21 +97,23 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		res := gjson.Get(jstr, rule).String()
-		return res
+		return strings.TrimSpace(res)
 	} else if strings.HasPrefix(rule, "@xpath:") {
 		rule = strings.ReplaceAll(rule, "\n", "")
+
 		rule = strings.TrimSpace(rule)
 		rule = rule[7:]
 		doc, _ := htmlquery.Parse(strings.NewReader(jstr))
 		nodes, _ := htmlquery.Query(doc, rule)
 		result := htmlquery.InnerText(nodes)
 
-		return result
+		return strings.TrimSpace(result)
 	} else if strings.HasPrefix(rule, "@js:") {
 		rule = rule[4:]
-		a, _ := vm.Run(rule)
+		vm.Run(rule)
+		a, _ := vm.Get("result")
 		result := a.String()
-		return result
+		return strings.TrimSpace(result)
 	} else if strings.HasPrefix(rule, "@re:") {
 		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
@@ -100,8 +121,8 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 		rule = strings.TrimSpace(rule)
 		re := regexp.MustCompile(rule)
 		res := re.FindStringSubmatch(jstr)
-		if len(res) > 0 {
-			return res[1]
+		if len(res) > 1 {
+			return strings.TrimSpace(res[1])
 
 		}
 		return ""
@@ -111,8 +132,6 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 	return ""
 }
 func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
-	rule = ` @js: 
-	`
 	rule = strings.TrimSpace(rule)
 	if strings.HasPrefix(rule, "@json:") {
 		rule = rule[6:]
@@ -134,7 +153,6 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 		//nodes, _ := htmlquery.QueryAll(doc, rule)
 		//fmt.Println(jstr)
 		var result []string
-		fmt.Println(htmlquery.InnerText(nodes[0]))
 		for i := 0; i < len(nodes); i++ {
 			result = append(result, htmlquery.InnerText(nodes[i]))
 		}
@@ -142,29 +160,33 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 
 	} else if strings.HasPrefix(rule, "@js:") {
 		rule = rule[4:]
-		rule = `
-	var a=["a","b","c"]
-	return a
-		`
-		a, _ := vm.Run(rule)
+		vm.Run(rule)
+		a, _ := vm.Get("result")
+		var result []string
+		for i := 0; i < len(a.Object().Keys()); i++ {
+			res, _ := a.Object().Get(strconv.Itoa(i))
+			result = append(result, res.String())
 
-		fmt.Println(a.String())
-		result := a
-		fmt.Println(result)
-		return nil
+		}
+		return result
 	} else if strings.HasPrefix(rule, "@re:") {
+
 		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		rule = rule[4:]
 		rule = strings.TrimSpace(rule)
 		re := regexp.MustCompile(rule)
-		res := re.FindStringSubmatch(jstr)
-		if len(res) > 0 {
-			return nil
+		res := re.FindAllStringSubmatch(jstr, -1)
 
+		var result []string
+		for i := 0; i < len(res); i++ {
+			if len(res[i]) > 1 {
+
+				result = append(result, res[i][1])
+			}
 		}
-		return nil
 
+		return result
 	}
 
 	return nil
@@ -194,44 +216,41 @@ func CheckUrl(baseUrl string, url string) string {
 }
 
 func LogPrintln(old_time int64, str string) {
-	now_time := time.Now().UnixNano() / 1e6
-	a := now_time - old_time
-	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
-	fmt.Printf("[%.2fs]", b)
+	LogTime(old_time)
 	fmt.Println(" " + str)
 }
 func LogPrintln_sanjao(old_time int64, str string) {
-	now_time := time.Now().UnixNano() / 1e6
-	a := now_time - old_time
-	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
-	fmt.Printf("[%.2fs]", b)
+	LogTime(old_time)
 	fmt.Println(" ➤➤➤ " + str)
 }
 func LogPrintln_shang(old_time int64, str string) {
-	now_time := time.Now().UnixNano() / 1e6
-	a := now_time - old_time
-	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
-	fmt.Printf("[%.2fs]", b)
+	LogTime(old_time)
 	fmt.Println("「   " + str)
 }
 func LogPrintln_xia(old_time int64, str string) {
-	now_time := time.Now().UnixNano() / 1e6
-	a := now_time - old_time
-	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
-	fmt.Printf("[%.2fs]", b)
+	LogTime(old_time)
 	fmt.Println(" └   " + str)
 }
 func LogPrintln_jtx(old_time int64, str string) {
-	now_time := time.Now().UnixNano() / 1e6
-	a := now_time - old_time
-	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
-	fmt.Printf("[%.2fs]", b)
+	LogTime(old_time)
 	fmt.Println(" ⬇   " + str)
 }
 func LogPrintln_jts(old_time int64, str string) {
+	LogTime(old_time)
+	fmt.Println(" ⬆   " + str)
+}
+func LogPrintln_err(old_time int64, str string) {
+	LogTime(old_time)
+	fmt.Println(" X   " + str)
+}
+func LogPrintln_success(old_time int64, str string) {
+	LogTime(old_time)
+	fmt.Println(" ✔   " + str)
+}
+func LogTime(old_time int64) {
 	now_time := time.Now().UnixNano() / 1e6
 	a := now_time - old_time
 	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
 	fmt.Printf("[%.2fs]", b)
-	fmt.Println(" ⬆   " + str)
+
 }
