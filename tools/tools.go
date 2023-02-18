@@ -24,23 +24,28 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 		fmt.Println("读取[" + spath + "]文件失败!请检查!!!")
 
 	}
+	//源名称
 	sourceName := gjson.Get(SourceJson, sid+".sourceName").String()
 	LogPrintln_sanjao(startTime, "开始测试源:"+sourceName)
-
+	//基础URL
 	sourceBaseUrl := gjson.Get(SourceJson, sid+".sourceUrl").String()
 	vm.Set("sourceBaseUrl", sourceBaseUrl)
+	//基础Header
 	sourceBaseHeader := gjson.Get(SourceJson, sid+".sourceBaseHeader").String()
 	vm.Set("sourceBaseHeader", sourceBaseHeader)
+	//搜索URL
 	sourceSUrl := gjson.Get(SourceJson, sid+".searchUrl").String()
 	sourceSearchUrl := ReplaceKey(sourceSUrl, keyword)
 	sourceSearchUrl = CheckUrl(sourceBaseUrl, sourceSearchUrl)
 	vm.Set("sourceSearchUrl", sourceSearchUrl)
+	//搜索方法
 	sourceSearchMethod := gjson.Get(SourceJson, sid+".searchMethod").String()
 	vm.Set("sourceSearchMethod", sourceSearchMethod)
-
+	//搜索Header
 	sourceSearchHeader := gjson.Get(SourceJson, sid+".searchHeader").String()
 	sourceSearchHeader = ReplaceKey(sourceSearchHeader, keyword)
 	vm.Set("sourceSearchHeader", sourceBaseHeader+"\n"+sourceSearchHeader)
+	//搜索数据，post才会用到
 	sourceSearchData := gjson.Get(SourceJson, sid+".searchData").String()
 	sourceSearchData = ReplaceKey(sourceSearchData, keyword)
 	vm.Set("sourceSearchData", sourceSearchData)
@@ -57,26 +62,14 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	}
 	LogPrintln_success(startTime, "获取成功:"+sourceSearchUrl)
 	result := res_body.String()
-	LogPrintln_jtx(startTime, "开始解析搜索页")
-	searchVideoList := gjson.Get(SourceJson, sid+".searchVideoList").String()
-	searchVideoListResult := JxResult_slice(vm, result, searchVideoList)
-
-	LogPrintln_shang(startTime, "获取视频列表")
-	if len(searchVideoListResult) > 0 {
-		LogPrintln_xia(startTime, "列表大小:"+strconv.Itoa(len(searchVideoListResult)))
-	} else {
-
-		LogPrintln_xia(startTime, "视频列表为空")
-	}
-	videoInfo := SelectVideo(0, searchVideoListResult)
-	sourceSearchVideoName := gjson.Get(SourceJson, sid+".searchVideoName").String()
-	LogPrintln_shang(startTime, "获取视频名")
-	videoName := JxResult_string(vm, videoInfo, sourceSearchVideoName)
-	LogPrintln_xia(startTime, videoName)
-	sourceSearchVideoAuthor := gjson.Get(SourceJson, sid+".searchVideoAuthor").String()
-	LogPrintln_shang(startTime, "导演")
-	SearchVideoAuthor := JxResult_string(vm, videoInfo, sourceSearchVideoAuthor)
-	LogPrintln_xia(startTime, SearchVideoAuthor)
+	videoUrl := SearchSpider(startTime, SourceJson, sid, vm, result)
+}
+func GetReturnString(startTime int64, vm *otto.Otto, pstr string, sid string, source_jstr string, key string, jx_string string) string {
+	LogPrintln_shang(startTime, pstr)
+	value := gjson.Get(source_jstr, sid+"."+key).String()
+	result := JxResult_string(vm, jx_string, value)
+	LogPrintln_xia(startTime, result)
+	return result
 
 }
 
@@ -123,9 +116,12 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 		}
 		return ""
 
-	}
+	} else if rule != "" {
 
-	return "格式有误，请检查!"
+		return "格式有误，请检查!"
+	}
+	return ""
+
 }
 func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 	rule = strings.TrimSpace(rule)
@@ -183,13 +179,16 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 		}
 
 		return result
+
+	} else if rule != "" {
+		var result []string
+		result = append(result, "格式有误，请检查!")
+
+		return result
 	}
 	var result []string
-	result = append(result, "格式有误，请检查!")
-
 	return result
 }
-
 func ReadSourceFile(path string) (string, error) {
 
 	content, err := ioutil.ReadFile(path)
@@ -219,36 +218,77 @@ func LogPrintln(old_time int64, str string) {
 }
 func LogPrintln_sanjao(old_time int64, str string) {
 	LogTime(old_time)
-	fmt.Println(" ➤➤➤ " + str)
+	fmt.Println(" ➤➤ " + str)
 }
 func LogPrintln_shang(old_time int64, str string) {
 	LogTime(old_time)
-	fmt.Println("「   " + str)
+	fmt.Println("「  " + str)
 }
 func LogPrintln_xia(old_time int64, str string) {
 	LogTime(old_time)
-	fmt.Println(" └   " + str)
+	fmt.Println(" └  " + str)
 }
 func LogPrintln_jtx(old_time int64, str string) {
 	LogTime(old_time)
-	fmt.Println(" ⬇   " + str)
+	fmt.Println(" ⬇  " + str)
 }
 func LogPrintln_jts(old_time int64, str string) {
 	LogTime(old_time)
-	fmt.Println(" ⬆   " + str)
+	fmt.Println(" ⬆  " + str)
+	fmt.Println()
 }
 func LogPrintln_err(old_time int64, str string) {
 	LogTime(old_time)
-	fmt.Println(" X   " + str)
+	fmt.Println(" X  " + str)
 }
 func LogPrintln_success(old_time int64, str string) {
 	LogTime(old_time)
-	fmt.Println(" ✔   " + str)
+	fmt.Println(" ✔  " + str)
 }
 func LogTime(old_time int64) {
 	now_time := time.Now().UnixNano() / 1e6
 	a := now_time - old_time
 	b, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(a)/float64(1000)), 64)
 	fmt.Printf("[%.2fs]", b)
+
+}
+func SearchSpider(startTime int64, SourceJson string, sid string, vm *otto.Otto, result string) string {
+
+	//解析搜索页
+	LogPrintln_jtx(startTime, "开始解析搜索页")
+	searchVideoList := gjson.Get(SourceJson, sid+".searchVideoList").String()
+	searchVideoListResult := JxResult_slice(vm, result, searchVideoList)
+
+	//解析视频列表
+	LogPrintln_shang(startTime, "获取视频列表")
+	if len(searchVideoListResult) > 0 {
+		LogPrintln_xia(startTime, "列表大小:"+strconv.Itoa(len(searchVideoListResult)))
+	} else {
+
+		LogPrintln_xia(startTime, "视频列表为空")
+	}
+	videoInfo := SelectVideo(0, searchVideoListResult)
+	//视频信息列表
+	GetReturnString(startTime, vm, "视频名称:", sid, SourceJson, "searchVideoName", videoInfo)
+	//地区
+	GetReturnString(startTime, vm, "地区:", sid, SourceJson, "searchVideoArea", videoInfo)
+	//导演
+	GetReturnString(startTime, vm, "导演:", sid, SourceJson, "searchVideoAuthor", videoInfo)
+	//年份
+	GetReturnString(startTime, vm, "年份:", sid, SourceJson, "searchVideoYear", videoInfo)
+	//主演
+	GetReturnString(startTime, vm, "主演:", sid, SourceJson, "searchVideoStarring", videoInfo)
+	//类型
+	GetReturnString(startTime, vm, "类型:", sid, SourceJson, "searchVideoKind", videoInfo)
+	//最新章节
+	GetReturnString(startTime, vm, "最新章节:", sid, SourceJson, "searchVideoLastChapter", videoInfo)
+	//封面
+	GetReturnString(startTime, vm, "封面:", sid, SourceJson, "searchVideoPic", videoInfo)
+	//简介
+	GetReturnString(startTime, vm, "简介:", sid, SourceJson, "searchVideoInfo", videoInfo)
+	//详情页URL
+	videoUrl := GetReturnString(startTime, vm, "详情页URL:", sid, SourceJson, "searchVideoUrl", videoInfo)
+	LogPrintln_jts(startTime, "搜索解析完成")
+	return videoUrl
 
 }
