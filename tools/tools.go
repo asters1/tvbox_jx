@@ -15,7 +15,6 @@ import (
 )
 
 func Spider(vm *otto.Otto, sid string, key string, spath string) {
-	keyword := url.QueryEscape(key)
 	startTime := time.Now().UnixNano() / 1e6
 
 	SourceJson, err := ReadSourceFile(spath)
@@ -33,36 +32,11 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	//基础Header
 	sourceBaseHeader := gjson.Get(SourceJson, sid+".sourceBaseHeader").String()
 	vm.Set("sourceBaseHeader", sourceBaseHeader)
-	//搜索URL
-	sourceSUrl := gjson.Get(SourceJson, sid+".searchUrl").String()
-	sourceSearchUrl := ReplaceKey(sourceSUrl, keyword)
-	sourceSearchUrl = CheckUrl(sourceBaseUrl, sourceSearchUrl)
-	vm.Set("sourceSearchUrl", sourceSearchUrl)
-	//搜索方法
-	sourceSearchMethod := gjson.Get(SourceJson, sid+".searchMethod").String()
-	vm.Set("sourceSearchMethod", sourceSearchMethod)
-	//搜索Header
-	sourceSearchHeader := gjson.Get(SourceJson, sid+".searchHeader").String()
-	sourceSearchHeader = ReplaceKey(sourceSearchHeader, keyword)
-	vm.Set("sourceSearchHeader", sourceBaseHeader+"\n"+sourceSearchHeader)
-	//搜索数据，post才会用到
-	sourceSearchData := gjson.Get(SourceJson, sid+".searchData").String()
-	sourceSearchData = ReplaceKey(sourceSearchData, keyword)
-	vm.Set("sourceSearchData", sourceSearchData)
+	//搜索
+	DetailUrl := SearchSpider(startTime, SourceJson, sid, key, sourceBaseUrl, sourceBaseHeader, vm)
+	//详情页
+	DetailSpider(startTime, SourceJson, sid, key, DetailUrl, sourceBaseHeader, vm)
 
-	LogPrintln_sanjao(startTime, "开始搜索关键字:"+key)
-	vm.Run(`
-	searchResult=go_RequestClient(sourceSearchUrl,sourceSearchMethod,sourceSearchHeader,sourceSearchData)
-	resultBody=searchResult.body
-	`)
-	res_body, err := vm.Get("resultBody")
-	if err != nil {
-		LogPrintln_err(startTime, "获取失败!!!"+sourceSearchUrl)
-		return
-	}
-	LogPrintln_success(startTime, "获取成功:"+sourceSearchUrl)
-	result := res_body.String()
-	videoUrl := SearchSpider(startTime, SourceJson, sid, vm, result)
 }
 func GetReturnString(startTime int64, vm *otto.Otto, pstr string, sid string, source_jstr string, key string, jx_string string) string {
 	LogPrintln_shang(startTime, pstr)
@@ -252,8 +226,38 @@ func LogTime(old_time int64) {
 	fmt.Printf("[%.2fs]", b)
 
 }
-func SearchSpider(startTime int64, SourceJson string, sid string, vm *otto.Otto, result string) string {
+func SearchSpider(startTime int64, SourceJson string, sid string, key string, sourceBaseUrl string, sourceBaseHeader string, vm *otto.Otto) string {
 
+	keyword := url.QueryEscape(key)
+	//搜索URL
+	sourceSUrl := gjson.Get(SourceJson, sid+".searchUrl").String()
+	sourceSearchUrl := ReplaceKey(sourceSUrl, keyword)
+	sourceSearchUrl = CheckUrl(sourceBaseUrl, sourceSearchUrl)
+	vm.Set("sourceSearchUrl", sourceSearchUrl)
+	//搜索方法
+	sourceSearchMethod := gjson.Get(SourceJson, sid+".searchMethod").String()
+	vm.Set("sourceSearchMethod", sourceSearchMethod)
+	//搜索Header
+	sourceSearchHeader := gjson.Get(SourceJson, sid+".searchHeader").String()
+	sourceSearchHeader = ReplaceKey(sourceSearchHeader, keyword)
+	vm.Set("sourceSearchHeader", sourceBaseHeader+"\n"+sourceSearchHeader)
+	//搜索数据，post才会用到
+	sourceSearchData := gjson.Get(SourceJson, sid+".searchData").String()
+	sourceSearchData = ReplaceKey(sourceSearchData, keyword)
+	vm.Set("sourceSearchData", sourceSearchData)
+
+	LogPrintln_sanjao(startTime, "开始搜索关键字:"+key)
+	vm.Run(`
+	searchResult=go_RequestClient(sourceSearchUrl,sourceSearchMethod,sourceSearchHeader,sourceSearchData)
+	resultBody=searchResult.body
+	`)
+	res_body, err := vm.Get("resultBody")
+	if err != nil {
+		LogPrintln_err(startTime, "获取失败!!!"+sourceSearchUrl)
+		return ""
+	}
+	LogPrintln_success(startTime, "获取成功:"+sourceSearchUrl)
+	result := res_body.String()
 	//解析搜索页
 	LogPrintln_jtx(startTime, "开始解析搜索页")
 	searchVideoList := gjson.Get(SourceJson, sid+".searchVideoList").String()
@@ -268,6 +272,7 @@ func SearchSpider(startTime int64, SourceJson string, sid string, vm *otto.Otto,
 		LogPrintln_xia(startTime, "视频列表为空")
 	}
 	videoInfo := SelectVideo(0, searchVideoListResult)
+	vm.Set("result", videoInfo)
 	//视频信息列表
 	GetReturnString(startTime, vm, "视频名称:", sid, SourceJson, "searchVideoName", videoInfo)
 	//地区
@@ -291,4 +296,8 @@ func SearchSpider(startTime int64, SourceJson string, sid string, vm *otto.Otto,
 	LogPrintln_jts(startTime, "搜索解析完成")
 	return videoUrl
 
+}
+
+func DetailSpider(startTime int64, SourceJson string, sid string, key string, detailUrl string, sourceBaseHeader string, vm *otto.Otto) string {
+	return ""
 }
