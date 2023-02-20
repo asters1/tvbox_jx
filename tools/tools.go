@@ -366,9 +366,9 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 	LogPrintln_sanjao(startTime, "开始搜索关键字:"+key)
 	vm.Run(`
 	searchResult=go_RequestClient(sourceSearchUrl,sourceSearchMethod,sourceSearchHeader,sourceSearchData)
-	resultBody=searchResult.body
+	searchBody=searchResult.body
 	`)
-	res_body, err := vm.Get("resultBody")
+	res_body, err := vm.Get("searchBody")
 	if err != nil {
 		LogPrintln_err(startTime, "获取失败!!!"+sourceSearchUrl)
 		return ""
@@ -417,6 +417,35 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 
 }
 
-func DetailSpider(startTime int64, SourceJson string, sid string, key string, detailUrl string, sourceBaseHeader string, vm *otto.Otto) string {
+func DetailSpider(startTime int64, SourceJson string, sid string, key string, detailUrl string, sourceDetailHeader string, vm *otto.Otto) string {
+	LogPrintln_jtx(startTime, "开始请求详情页")
+	//详情页URL
+	vm.Set("sourceDetailUrl", detailUrl)
+	//详情方法
+	sourceDetaiMethod := gjson.Get(SourceJson, sid+".DetailMethod").String()
+	vm.Set("sourceDetailMethod", sourceDetaiMethod)
+	vm.Run(`
+	console.log(sourceDetailMethod)`)
+
+	//详情Header
+	sourceDetaiHeader := gjson.Get(SourceJson, sid+".DetailHeader").String()
+	sourceDetaiHeader = JxResult_string(vm, "", sourceDetaiHeader)
+	vm.Set("sourceDetailHeader", sourceDetaiHeader+"\n"+sourceDetaiHeader)
+	//搜索数据，post才会用到
+	sourceDetaiData := gjson.Get(SourceJson, sid+".DetailData").String()
+	vm.Set("sourceDetailData", sourceDetaiData)
+
+	vm.Run(`
+	DetailResult=go_RequestClient(sourceDetailUrl,sourceDetailMethod,sourceDetailHeader,sourceDetailData)
+	resultBody=DetailResult.body
+	`)
+	res_body, err := vm.Get("resultBody")
+	if err != nil {
+		LogPrintln_err(startTime, "获取失败!!!"+detailUrl)
+		return ""
+	}
+	LogPrintln_success(startTime, "获取成功:"+detailUrl)
+	result := res_body.String()
+	fmt.Println(result)
 	return ""
 }

@@ -22,7 +22,6 @@
     "searchVideoLastChapter": "@json:msg",
     "searchVideoInfo": "@json:brief",
     "searchVideoUrl": "@json:id@js:result=\"http://api.kunyu77.com/api.php/provide/videoDetail?ids=\"+result+\"&pcode=010110002&version=2.0.4&devid=4ac3fe96a6133de96904b8d3c8cfe16d&package=com.sevenVideo.app.android&sys=android&sysver=7.1.2&brand=realme&model=RMX1931&sj=\"+go_getTime(10)",
-    "DetailUrl": "/search.html?keyword={{key}}",
     "DetailMethod": "get",
     "DetailHeader": "",
     "DetailData": "",
