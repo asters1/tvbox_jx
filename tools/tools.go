@@ -23,6 +23,10 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 		fmt.Println("读取[" + spath + "]文件失败!请检查!!!")
 
 	}
+	//JS函数初始化
+	jsinit := gjson.Get(SourceJson, sid+".jsInit").String()
+	JxResult_string(vm, "", jsinit)
+
 	//源名称
 	sourceName := gjson.Get(SourceJson, sid+".sourceName").String()
 	LogPrintln_sanjao(startTime, "开始测试源:"+sourceName)
@@ -31,6 +35,7 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	vm.Set("sourceBaseUrl", sourceBaseUrl)
 	//基础Header
 	sourceBaseHeader := gjson.Get(SourceJson, sid+".sourceBaseHeader").String()
+	sourceBaseHeader = JxResult_string(vm, "", sourceBaseHeader)
 	vm.Set("sourceBaseHeader", sourceBaseHeader)
 	//搜索
 	DetailUrl := SearchSpider(startTime, SourceJson, sid, key, sourceBaseUrl, sourceBaseHeader, vm)
@@ -55,22 +60,50 @@ func SelectVideo(index int, list []string) string {
 func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 	rule = strings.TrimSpace(rule)
 
+	rule_js := ""
 	if strings.HasPrefix(rule, "@json:") {
 		rule = rule[6:]
+		if strings.Contains(rule, "@js:") {
+			rule_js = rule[strings.Index(rule, "@js:"):]
+			rule = rule[:strings.Index(rule, "@js:")]
+		}
 		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		res := gjson.Get(jstr, rule).String()
-		return strings.TrimSpace(res)
+
+		if rule_js != "" {
+			vm.Set("result", strings.TrimSpace(res))
+			rule_js = rule_js[4:]
+			vm.Run(rule_js)
+			a, _ := vm.Get("result")
+			result := a.String()
+			return strings.TrimSpace(result)
+		} else {
+			return strings.TrimSpace(res)
+		}
 	} else if strings.HasPrefix(rule, "@xpath:") {
 		rule = strings.ReplaceAll(rule, "\n", "")
 
 		rule = strings.TrimSpace(rule)
 		rule = rule[7:]
+		if strings.Contains(rule, "@js:") {
+			rule_js = rule[strings.Index(rule, "@js:"):]
+			rule = rule[:strings.Index(rule, "@js:")]
+		}
 		doc, _ := htmlquery.Parse(strings.NewReader(jstr))
 		nodes, _ := htmlquery.Query(doc, rule)
 		result := htmlquery.InnerText(nodes)
 
-		return strings.TrimSpace(result)
+		if rule_js != "" {
+			vm.Set("result", strings.TrimSpace(result))
+			rule_js = rule_js[4:]
+			vm.Run(rule_js)
+			a, _ := vm.Get("result")
+			result := a.String()
+			return strings.TrimSpace(result)
+		} else {
+			return strings.TrimSpace(result)
+		}
 	} else if strings.HasPrefix(rule, "@js:") {
 		rule = rule[4:]
 		vm.Run(rule)
@@ -81,11 +114,24 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		rule = rule[4:]
+		if strings.Contains(rule, "@js:") {
+			rule_js = rule[strings.Index(rule, "@js:"):]
+			rule = rule[:strings.Index(rule, "@js:")]
+		}
 		rule = strings.TrimSpace(rule)
 		re := regexp.MustCompile(rule)
 		res := re.FindStringSubmatch(jstr)
 		if len(res) > 1 {
-			return strings.TrimSpace(res[1])
+			if rule_js != "" {
+				vm.Set("result", strings.TrimSpace(res[1]))
+				rule_js = rule_js[4:]
+				vm.Run(rule_js)
+				a, _ := vm.Get("result")
+				result := a.String()
+				return strings.TrimSpace(result)
+			} else {
+				return strings.TrimSpace(res[1])
+			}
 
 		}
 		return ""
@@ -93,10 +139,16 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 	} else if rule != "" {
 
 		return "格式有误，请检查!"
+	} else if strings.HasPrefix(rule, "@str:") {
+		rule = rule[5:]
+		rule = strings.TrimSpace(rule)
+		return rule
+
 	}
 	return ""
 
 }
+
 func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 	rule = strings.TrimSpace(rule)
 	if strings.HasPrefix(rule, "@json:") {
@@ -159,6 +211,22 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 		result = append(result, "格式有误，请检查!")
 
 		return result
+	} else if strings.HasPrefix(rule, "@strs:") {
+
+		rule = rule[6:]
+		rule = strings.TrimSpace(rule)
+		if strings.HasPrefix(rule, "[") && strings.HasSuffix(rule, "]") {
+			rule = rule[1 : len(rule)-1]
+			result := strings.Split(rule, ",")
+			return result
+
+		} else {
+			var result []string
+			result = append(result, "格式有误，请检查!")
+
+			return result
+
+		}
 	}
 	var result []string
 	return result
@@ -229,9 +297,11 @@ func LogTime(old_time int64) {
 func SearchSpider(startTime int64, SourceJson string, sid string, key string, sourceBaseUrl string, sourceBaseHeader string, vm *otto.Otto) string {
 
 	keyword := url.QueryEscape(key)
+	vm.Set("keyword", keyword)
 	//搜索URL
 	sourceSUrl := gjson.Get(SourceJson, sid+".searchUrl").String()
 	sourceSearchUrl := ReplaceKey(sourceSUrl, keyword)
+	sourceSearchUrl = JxResult_string(vm, "", sourceSearchUrl)
 	sourceSearchUrl = CheckUrl(sourceBaseUrl, sourceSearchUrl)
 	vm.Set("sourceSearchUrl", sourceSearchUrl)
 	//搜索方法
@@ -239,6 +309,7 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 	vm.Set("sourceSearchMethod", sourceSearchMethod)
 	//搜索Header
 	sourceSearchHeader := gjson.Get(SourceJson, sid+".searchHeader").String()
+	sourceSearchHeader = JxResult_string(vm, "", sourceSearchHeader)
 	sourceSearchHeader = ReplaceKey(sourceSearchHeader, keyword)
 	vm.Set("sourceSearchHeader", sourceBaseHeader+"\n"+sourceSearchHeader)
 	//搜索数据，post才会用到
@@ -270,6 +341,8 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 	} else {
 
 		LogPrintln_xia(startTime, "视频列表为空")
+		LogPrintln_jts(startTime, "搜索解析完成")
+		return ""
 	}
 	videoInfo := SelectVideo(0, searchVideoListResult)
 	vm.Set("result", videoInfo)

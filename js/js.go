@@ -1,18 +1,42 @@
 package js
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/robertkrimen/otto"
 )
 
 func Init(vm *otto.Otto) *otto.Otto {
 	vm = otto.New()
+	//获取md5
+	vm.Set("go_md5", func(call otto.FunctionCall) otto.Value {
+		str, _ := call.Argument(0).ToString()
+		data := []byte(str) //切片
+		has := md5.Sum(data)
+		md5str := fmt.Sprintf("%x", has) //将[]byte转成16进制
+		vm_md5, _ := vm.ToValue(md5str)
+		return vm_md5
+
+	})
+	//获取时间戳
+	vm.Set("go_getTime", func(call otto.FunctionCall) otto.Value {
+		i, _ := call.Argument(0).ToInteger()
+		if i > 19 {
+			i = 19
+		}
+		timeUnixNano := time.Now().UnixNano()
+		str_time := strconv.FormatInt(timeUnixNano, 10)
+		s, _ := vm.ToValue(str_time[:i])
+		return s
+	})
+	//发送请求
 	vm.Set("go_RequestClient", func(call otto.FunctionCall) otto.Value {
 		FormatStr := func(jsonstr string) map[string]string {
 			DataMap := make(map[string]string)
