@@ -111,7 +111,6 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 		result := a.String()
 		return strings.TrimSpace(result)
 	} else if strings.HasPrefix(rule, "@re:") {
-		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		rule = rule[4:]
 		if strings.Contains(rule, "@js:") {
@@ -151,8 +150,13 @@ func JxResult_string(vm *otto.Otto, jstr string, rule string) string {
 
 func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 	rule = strings.TrimSpace(rule)
+	rule_js := ""
 	if strings.HasPrefix(rule, "@json:") {
 		rule = rule[6:]
+		if strings.Contains(rule, "@js:") {
+			rule_js = rule[strings.Index(rule, "@js:"):]
+			rule = rule[:strings.Index(rule, "@js:")]
+		}
 		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		res := gjson.Get(jstr, rule).Array()
@@ -161,11 +165,27 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 			result = append(result, res[i].String())
 		}
 
+		if rule_js != "" {
+			vm.Set("result", result)
+			rule_js = rule_js[4:]
+			vm.Run(rule_js)
+			a, _ := vm.Get("result")
+			for i := 0; i < len(a.Object().Keys()); i++ {
+				res, _ := a.Object().Get(strconv.Itoa(i))
+				result = append(result, res.String())
+
+			}
+			return result
+		}
 		return result
 	} else if strings.HasPrefix(rule, "@xpath:") {
 		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		rule = rule[7:]
+		if strings.Contains(rule, "@js:") {
+			rule_js = rule[strings.Index(rule, "@js:"):]
+			rule = rule[:strings.Index(rule, "@js:")]
+		}
 		doc, _ := htmlquery.Parse(strings.NewReader(jstr))
 		nodes, _ := htmlquery.QueryAll(doc, rule)
 		//nodes, _ := htmlquery.QueryAll(doc, rule)
@@ -173,6 +193,18 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 		var result []string
 		for i := 0; i < len(nodes); i++ {
 			result = append(result, htmlquery.InnerText(nodes[i]))
+		}
+		if rule_js != "" {
+			vm.Set("result", result)
+			rule_js = rule_js[4:]
+			vm.Run(rule_js)
+			a, _ := vm.Get("result")
+			for i := 0; i < len(a.Object().Keys()); i++ {
+				res, _ := a.Object().Get(strconv.Itoa(i))
+				result = append(result, res.String())
+
+			}
+			return result
 		}
 		return result
 
@@ -189,9 +221,12 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 		return result
 	} else if strings.HasPrefix(rule, "@re:") {
 
-		rule = strings.ReplaceAll(rule, "\n", "")
 		rule = strings.TrimSpace(rule)
 		rule = rule[4:]
+		if strings.Contains(rule, "@js:") {
+			rule_js = rule[strings.Index(rule, "@js:"):]
+			rule = rule[:strings.Index(rule, "@js:")]
+		}
 		rule = strings.TrimSpace(rule)
 		re := regexp.MustCompile(rule)
 		res := re.FindAllStringSubmatch(jstr, -1)
@@ -203,7 +238,18 @@ func JxResult_slice(vm *otto.Otto, jstr string, rule string) []string {
 				result = append(result, res[i][1])
 			}
 		}
+		if rule_js != "" {
+			vm.Set("result", result)
+			rule_js = rule_js[4:]
+			vm.Run(rule_js)
+			a, _ := vm.Get("result")
+			for i := 0; i < len(a.Object().Keys()); i++ {
+				res, _ := a.Object().Get(strconv.Itoa(i))
+				result = append(result, res.String())
 
+			}
+			return result
+		}
 		return result
 
 	} else if rule != "" {
