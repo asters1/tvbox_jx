@@ -40,7 +40,9 @@ func Spider(vm *otto.Otto, sid string, key string, spath string) {
 	//搜索
 	DetailUrl := SearchSpider(startTime, SourceJson, sid, key, sourceBaseUrl, sourceBaseHeader, vm)
 	//详情页
-	DetailSpider(startTime, SourceJson, sid, key, DetailUrl, sourceBaseHeader, vm)
+	catalogUrl := DetailSpider(startTime, SourceJson, sid, DetailUrl, sourceBaseHeader, vm)
+	//目录页
+	CatalogSpider(startTime, SourceJson, sid, catalogUrl, sourceBaseHeader, vm)
 
 }
 func GetReturnString(startTime int64, vm *otto.Otto, pstr string, sid string, source_jstr string, key string, jx_string string) string {
@@ -48,6 +50,7 @@ func GetReturnString(startTime int64, vm *otto.Otto, pstr string, sid string, so
 	value := gjson.Get(source_jstr, sid+"."+key).String()
 	result := JxResult_string(vm, jx_string, value)
 	LogPrintln_xia(startTime, result)
+	vm.Set(key, result)
 	return result
 
 }
@@ -395,22 +398,14 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 	vm.Set("result", videoInfo)
 	//视频信息列表
 	GetReturnString(startTime, vm, "视频名称:", sid, SourceJson, "searchVideoName", videoInfo)
-	//地区
-	GetReturnString(startTime, vm, "地区:", sid, SourceJson, "searchVideoArea", videoInfo)
-	//导演
-	GetReturnString(startTime, vm, "导演:", sid, SourceJson, "searchVideoAuthor", videoInfo)
-	//年份
-	GetReturnString(startTime, vm, "年份:", sid, SourceJson, "searchVideoYear", videoInfo)
-	//主演
-	GetReturnString(startTime, vm, "主演:", sid, SourceJson, "searchVideoStarring", videoInfo)
+	//视频ID
+	GetReturnString(startTime, vm, "视频ID:", sid, SourceJson, "searchVideoId", videoInfo)
 	//类型
 	GetReturnString(startTime, vm, "类型:", sid, SourceJson, "searchVideoKind", videoInfo)
 	//最新章节
 	GetReturnString(startTime, vm, "最新章节:", sid, SourceJson, "searchVideoLastChapter", videoInfo)
 	//封面
 	GetReturnString(startTime, vm, "封面:", sid, SourceJson, "searchVideoPic", videoInfo)
-	//简介
-	GetReturnString(startTime, vm, "简介:", sid, SourceJson, "searchVideoInfo", videoInfo)
 	//详情页URL
 	videoUrl := GetReturnString(startTime, vm, "详情页URL:", sid, SourceJson, "searchVideoUrl", videoInfo)
 	LogPrintln_jts(startTime, "搜索解析完成")
@@ -418,7 +413,7 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 
 }
 
-func DetailSpider(startTime int64, SourceJson string, sid string, key string, detailUrl string, sourceBaseHeader string, vm *otto.Otto) string {
+func DetailSpider(startTime int64, SourceJson string, sid string, detailUrl string, sourceBaseHeader string, vm *otto.Otto) string {
 	LogPrintln_jtx(startTime, "开始请求详情页")
 	//详情页URL
 	vm.Set("sourceDetailUrl", detailUrl)
@@ -463,6 +458,13 @@ func DetailSpider(startTime int64, SourceJson string, sid string, key string, de
 	GetReturnString(startTime, vm, "地区", sid, SourceJson, "DetailVideoArea", videoInfo)
 	GetReturnString(startTime, vm, "导演", sid, SourceJson, "DetailVideoAuthor", videoInfo)
 	GetReturnString(startTime, vm, "主演", sid, SourceJson, "DetailVideoStarring", videoInfo)
+	GetReturnString(startTime, vm, "类型", sid, SourceJson, "DetailVideoKind", videoInfo)
+	GetReturnString(startTime, vm, "最新章节", sid, SourceJson, "DetailVideoLastChapter", videoInfo)
+	GetReturnString(startTime, vm, "简介", sid, SourceJson, "DetailVideoInfo", videoInfo)
+	res := GetReturnString(startTime, vm, "目录URL", sid, SourceJson, "DetailVideoUrl", videoInfo)
 
-	return ""
+	return res
+}
+func CatalogSpider(startTime int64, SourceJson string, sid string, catalogUrl string, sourceBaseHeader string, vm *otto.Otto) {
+
 }
