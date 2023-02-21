@@ -445,6 +445,24 @@ func DetailSpider(startTime int64, SourceJson string, sid string, key string, de
 	}
 	LogPrintln_success(startTime, "获取成功:"+detailUrl)
 	result := res_body.String()
-	fmt.Println(result)
+	sourceDetailData := gjson.Get(SourceJson, sid+".DetailData").String()
+	videoInfo := JxResult_string(vm, result, sourceDetailData)
+	LogPrintln_shang(startTime, "获取视频信息")
+	if len(videoInfo) > 0 {
+		LogPrintln_xia(startTime, "视频信息获取成功")
+		vm.Set("result", videoInfo)
+
+	} else {
+		LogPrintln_xia(startTime, "视频信息获取失败")
+		LogPrintln_jts(startTime, "搜索解析完成")
+
+		return ""
+	}
+	GetReturnString(startTime, vm, "视频名称", sid, SourceJson, "DetailVideoName", videoInfo)
+	GetReturnString(startTime, vm, "视频ID", sid, SourceJson, "DetailVideoId", videoInfo)
+	GetReturnString(startTime, vm, "地区", sid, SourceJson, "DetailVideoArea", videoInfo)
+	GetReturnString(startTime, vm, "导演", sid, SourceJson, "DetailVideoAuthor", videoInfo)
+	GetReturnString(startTime, vm, "主演", sid, SourceJson, "DetailVideoStarring", videoInfo)
+
 	return ""
 }
