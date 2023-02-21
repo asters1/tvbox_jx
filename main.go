@@ -7,7 +7,7 @@ import (
 	"github.com/robertkrimen/otto"
 )
 
-//var
+// var
 var (
 	keyword    string
 	result     string

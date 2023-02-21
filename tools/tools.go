@@ -462,9 +462,38 @@ func DetailSpider(startTime int64, SourceJson string, sid string, detailUrl stri
 	GetReturnString(startTime, vm, "最新章节", sid, SourceJson, "DetailVideoLastChapter", videoInfo)
 	GetReturnString(startTime, vm, "简介", sid, SourceJson, "DetailVideoInfo", videoInfo)
 	res := GetReturnString(startTime, vm, "目录URL", sid, SourceJson, "DetailVideoUrl", videoInfo)
+	LogPrintln_jts(startTime, "详情页解析完成")
 
 	return res
 }
-func CatalogSpider(startTime int64, SourceJson string, sid string, catalogUrl string, sourceBaseHeader string, vm *otto.Otto) {
+func CatalogSpider(startTime int64, SourceJson string, sid string, catalogUrl string, sourceBaseHeader string, vm *otto.Otto) string {
+	LogPrintln_jtx(startTime, "开始请求目录页")
 
+	//详情页URL
+	vm.Set("sourceCatalogUrl", catalogUrl)
+	//详情方法
+	CatalogMethod := gjson.Get(SourceJson, sid+".CatalogMethod").String()
+	vm.Set("sourceCatalogMethod", CatalogMethod)
+
+	//详情Header
+	sourceCatalogHeader := gjson.Get(SourceJson, sid+".CatalogHeader").String()
+	sourceCatalogHeader = JxResult_string(vm, "", sourceCatalogHeader)
+	vm.Set("sourceCatalogHeader", sourceBaseHeader+"\n"+sourceCatalogHeader)
+	//搜索数据，post才会用到
+	sourceCatalogData := gjson.Get(SourceJson, sid+".CatalogData").String()
+	vm.Set("sourceCatalogData", sourceCatalogData)
+
+	vm.Run(`
+	CatalogResult=go_RequestClient(sourceCatalogUrl,sourceCatalogMethod,sourceCatalogHeader,sourceCatalogData)
+	resultBody=CatalogResult.body
+	`)
+	res_body, err := vm.Get("resultBody")
+	if err != nil {
+		LogPrintln_err(startTime, "获取失败!!!"+catalogUrl)
+		return ""
+	}
+	LogPrintln_success(startTime, "获取成功:"+catalogUrl)
+	result := res_body.String()
+	fmt.Println(result)
+	return ""
 }
