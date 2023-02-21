@@ -1,7 +1,7 @@
 {
   "111": {
     "sourceId": "111",
-    "jsInit": "@js:\nfunction getHeaders(t,str){\nres=\"User-Agent:okhttp/3.12.0\\nt:\"+go_getTime(10)+\"\\nTK:\"+go_md5(str)\nreturn res}",
+    "jsInit": "@js:\nfunction getHeaders(t,str){\nres=\"User-Agent:okhttp/3.12.0\\nt:\"+t+\"\\nTK:\"+go_md5(str)\nreturn res}\nfunction getHeaders1(t,str){\nres=\"User-Agent:Dalvik/2.1.0 (Linux; U; Android 11; M2012K11AC Build/RKQ1.200826.002)\\nt:\"+go_getTime(10)+\"\\nTK:\"+go_md5(str)\nreturn res}",
     "sourceUrl": "https://api.kunyu77.com",
     "sourceName": "酷云七七",
     "sourceGroup": "",
@@ -9,8 +9,8 @@
     "sourceBaseHeader": "@js:t=go_getTime(10);ua=\"User-Agent:okhttp/3.12.0\";\nresult=ua+\"\\n\"+\"t:\"+t",
     "searchUrl": "@js:result=\"/api.php/provide/searchVideo?pcode=010110002&version=2.0.4&devid=4ac3fe96a6133de96904b8d3c8cfe16d&package=com.sevenVideo.app.android&sys=android&sysver=7.1.2&brand=realme&model=RMX1931&sj=\"+t+\"&searchName=\"+keyword+\"&pg=1\";getHeaders(1,1)",
     "searchMethod": "get",
+    "searchHeader": "@js:t=1676899026 ;result=getHeaders(t,\"/api.php/provide/searchVideorealme4ac3fe96a6133de96904b8d3c8cfe16dRMX1931com.sevenVideo.app.android0101100021\"+keyword+t+\"XSpeUFjJ\";console.log(result))",
     "searchData": "",
-    "searchHeader": "@js:result=getHeaders(1234567890,\"ddd\")",
     "searchVideoList": "@json:data",
     "searchVideoName": "@json:videoName",
     "searchVideoArea": "",

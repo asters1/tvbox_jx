@@ -344,6 +344,7 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 
 	keyword := url.QueryEscape(key)
 	vm.Set("keyword", keyword)
+	vm.Set("key", key)
 	//搜索URL
 	sourceSUrl := gjson.Get(SourceJson, sid+".searchUrl").String()
 	sourceSearchUrl := ReplaceKey(sourceSUrl, keyword)
@@ -434,6 +435,7 @@ func DetailSpider(startTime int64, SourceJson string, sid string, key string, de
 	//搜索数据，post才会用到
 	sourceDetaiData := gjson.Get(SourceJson, sid+".DetailData").String()
 	vm.Set("sourceDetailData", sourceDetaiData)
+	//"searchHeader": "@js:t=go_getTime(10) ;result=getHeaders(t,\"/api.php/provide/searchVideorealme4ac3fe96a6133de96904b8d3c8cfe16dRMX1931com.sevenVideo.app.android0101100021\"+keyword+t+\"XSpeUFjJ\")",
 
 	vm.Run(`
 	DetailResult=go_RequestClient(sourceDetailUrl,sourceDetailMethod,sourceDetailHeader,sourceDetailData)
