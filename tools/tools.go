@@ -358,7 +358,7 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 	sourceSearchHeader := gjson.Get(SourceJson, sid+".searchHeader").String()
 	sourceSearchHeader = JxResult_string(vm, "", sourceSearchHeader)
 	sourceSearchHeader = ReplaceKey(sourceSearchHeader, keyword)
-	vm.Set("sourceSearchHeader", sourceBaseHeader+"\n"+sourceSearchHeader)
+	vm.Set("sourceSearchHeader", strings.TrimSpace(sourceBaseHeader+"\n"+sourceSearchHeader))
 	//搜索数据，post才会用到
 	sourceSearchData := gjson.Get(SourceJson, sid+".searchData").String()
 	sourceSearchData = ReplaceKey(sourceSearchData, keyword)
@@ -418,24 +418,21 @@ func SearchSpider(startTime int64, SourceJson string, sid string, key string, so
 
 }
 
-func DetailSpider(startTime int64, SourceJson string, sid string, key string, detailUrl string, sourceDetailHeader string, vm *otto.Otto) string {
+func DetailSpider(startTime int64, SourceJson string, sid string, key string, detailUrl string, sourceBaseHeader string, vm *otto.Otto) string {
 	LogPrintln_jtx(startTime, "开始请求详情页")
 	//详情页URL
 	vm.Set("sourceDetailUrl", detailUrl)
 	//详情方法
-	sourceDetaiMethod := gjson.Get(SourceJson, sid+".DetailMethod").String()
-	vm.Set("sourceDetailMethod", sourceDetaiMethod)
-	vm.Run(`
-	console.log(sourceDetailMethod)`)
+	sourceDetailMethod := gjson.Get(SourceJson, sid+".DetailMethod").String()
+	vm.Set("sourceDetailMethod", sourceDetailMethod)
 
 	//详情Header
-	sourceDetaiHeader := gjson.Get(SourceJson, sid+".DetailHeader").String()
-	sourceDetaiHeader = JxResult_string(vm, "", sourceDetaiHeader)
-	vm.Set("sourceDetailHeader", sourceDetaiHeader+"\n"+sourceDetaiHeader)
+	sourceDetailHeader := gjson.Get(SourceJson, sid+".DetailHeader").String()
+	sourceDetailHeader = JxResult_string(vm, "", sourceDetailHeader)
+	vm.Set("sourceDetailHeader", sourceBaseHeader+"\n"+sourceDetailHeader)
 	//搜索数据，post才会用到
 	sourceDetaiData := gjson.Get(SourceJson, sid+".DetailData").String()
 	vm.Set("sourceDetailData", sourceDetaiData)
-	//"searchHeader": "@js:t=go_getTime(10) ;result=getHeaders(t,\"/api.php/provide/searchVideorealme4ac3fe96a6133de96904b8d3c8cfe16dRMX1931com.sevenVideo.app.android0101100021\"+keyword+t+\"XSpeUFjJ\")",
 
 	vm.Run(`
 	DetailResult=go_RequestClient(sourceDetailUrl,sourceDetailMethod,sourceDetailHeader,sourceDetailData)
